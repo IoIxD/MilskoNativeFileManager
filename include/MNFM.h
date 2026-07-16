@@ -11,10 +11,10 @@ enum _MNFMCreationType {
 typedef enum _MNFMCreationType MNFMCreationType;
 
 /* Initialize the MNFM Library */
-MWDECL void MWAPI MNFMLibraryInit(void);
+void MNFMLibraryInit(void);
 
 /* Open the native file chooser, or fallback to Milsko's if we're unable to */
-MWDECL MwWidget MWAPI MNFMOpen(MwWidget handle, const char *title,
+MwWidget MNFMOpen(MwWidget handle, const char *title,
                                MNFMCreationType create_type);
 
 #endif

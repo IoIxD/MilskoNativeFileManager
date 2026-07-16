@@ -105,6 +105,7 @@ static int _MNFMOpen(MwWidget handle, const char *title,
   DBusPendingCall *pending;
   const char *handle_str;
   internal *o = handle->internal;
+  const char *parent_window = "";
 
   msg = dbus.dbus_message_new_method_call(
       "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
@@ -114,7 +115,6 @@ static int _MNFMOpen(MwWidget handle, const char *title,
     printf("no memory\n");
     return 1;
   }
-  const char *parent_window = "";
 
   // msg != NULL
   dbus.dbus_message_iter_init_append(msg, &margs);
@@ -291,7 +291,7 @@ MwClassRec MNFMWidgetClassRec = {
 
 MwClass MNFMWidgetClass = &MNFMWidgetClassRec;
 
-MWDECL void MWAPI MNFMLibraryInit(void) {
+void MNFMLibraryInit(void) {
   dbus.dbus_lib = dlopen("libdbus-1.so", RTLD_GLOBAL | RTLD_NOW);
   if (!dbus.dbus_lib) {
     printf("Cannot find libdbus-1.so, falling back to Milsko file picker.\n");

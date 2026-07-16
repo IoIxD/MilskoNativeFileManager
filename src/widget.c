@@ -1,5 +1,7 @@
 #include <MNFM.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 extern MwClass MNFMWidgetClass;
 
