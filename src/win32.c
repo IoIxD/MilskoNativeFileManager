@@ -11,9 +11,10 @@ typedef struct internal_t {
   MNFMCreationType creation_type;
 
   IFileOpenDialog *pfd;
-  DWORD thread;
+  HANDLE thread;
 
   MwWidget handle;
+  WCHAR wtitle[512];
 
 } internal;
 
@@ -31,9 +32,17 @@ static int wcreate(MwWidget handle) {
 
   memset(o, 0, sizeof(internal));
 
-  COM_MUST_CORRECT(CoCreateInstance(&CLSID_FileOpenDialog, NULL,
-                                    CLSCTX_INPROC_SERVER, &IID_IFileOpenDialog,
-                                    (void **)&o->pfd))
+  /* make sure we can create an instance. */
+  hr = CoCreateInstance(&CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER,
+                        &IID_IFileOpenDialog, (void **)&o->pfd);
+  if (!SUCCEEDED(hr)) {
+    printf("CoCreateInstance failed. Falling back to Milsko file picker.");
+    o->valid = MwFALSE;
+    return 0;
+  }
+  /* if we can then remove it because we're gonna create it later */
+  o->pfd->lpVtbl->Release(o->pfd);
+  DeleteObject(o->pfd);
 
   o->handle = handle;
 
@@ -44,11 +53,16 @@ static int wcreate(MwWidget handle) {
 
 static void destroy(MwWidget handle) {
   internal *o = handle->internal;
-  o->pfd->lpVtbl->Close(o->pfd, 0);
 
-  o->pfd->lpVtbl->Release(o->pfd);
+  if (o->pfd) {
+    o->pfd->lpVtbl->Close(o->pfd, 0);
+    o->pfd->lpVtbl->Release(o->pfd);
+    DeleteObject(o->pfd);
+  }
 
-  DeleteObject(o->pfd);
+  if (o->thread) {
+    TerminateThread(o->thread, 0);
+  }
 
   return;
 }
@@ -56,6 +70,19 @@ static void destroy(MwWidget handle) {
 static DWORD WINAPI folder_show(LPVOID lpParam) {
   internal *o = lpParam;
   IShellItem *arr = NULL;
+  HRESULT hr;
+  FILEOPENDIALOGOPTIONS opts;
+
+  CoCreateInstance(&CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER,
+                   &IID_IFileOpenDialog, (void **)&o->pfd);
+
+  if (o->creation_type == MNFMDIRECTORY) {
+    o->pfd->lpVtbl->GetOptions(o->pfd, &opts);
+    opts |= FOS_PICKFOLDERS;
+    o->pfd->lpVtbl->SetOptions(o->pfd, opts);
+  }
+
+  o->pfd->lpVtbl->SetTitle(o->pfd, o->wtitle);
 
   o->pfd->lpVtbl->Show(o->pfd, NULL);
 
@@ -65,7 +92,11 @@ static DWORD WINAPI folder_show(LPVOID lpParam) {
     if (arr) {
       WCHAR *wname = NULL;
       char name[255];
-      arr->lpVtbl->GetDisplayName(arr, SIGDN_FILESYSPATH, &wname);
+      int hr = arr->lpVtbl->GetDisplayName(arr, SIGDN_FILESYSPATH, &wname);
+
+      if (hr != S_OK) {
+        printf("GetDisplayName Error %08X\n", hr);
+      }
       memset(name, 0, sizeof(name));
 
       WideCharToMultiByte(CP_UTF8, 0, wname, -1, name, sizeof(name) - 1, NULL,
@@ -80,33 +111,28 @@ static DWORD WINAPI folder_show(LPVOID lpParam) {
     }
   }
 
+  o->pfd->lpVtbl->Release(o->pfd);
+
+  DeleteObject(o->pfd);
+
+  o->pfd = NULL;
+
   return 0;
 }
 
 void _MNFMSetVars(MwWidget handle, MNFMCreationType creationType) {
-  HRESULT hr;
   internal *o = handle->internal;
-  WCHAR wtitle[512];
-  FILEOPENDIALOGOPTIONS opts;
   const char *title = MwGetText(handle, MwNtitle);
   o->creation_type = creationType;
 
-  MultiByteToWideChar(CP_UTF8, 0, title, -1, wtitle, sizeof(wtitle));
-
-  if (creationType == MNFMDIRECTORY) {
-    o->pfd->lpVtbl->GetOptions(o->pfd, &opts);
-    opts |= FOS_PICKFOLDERS;
-    o->pfd->lpVtbl->SetOptions(o->pfd, opts);
-  }
-
-  o->pfd->lpVtbl->SetTitle(o->pfd, wtitle);
+  MultiByteToWideChar(CP_UTF8, 0, title, -1, o->wtitle, sizeof(o->wtitle));
 
   CreateThread(NULL,        // default security attributes
                0,           // use default stack size
                folder_show, // thread function name
                o,           // argument to thread function
                0,           // use default creation flags
-               &o->thread); // returns the thread identifier
+               o->thread);  // returns the thread identifier
 };
 
 MwBool _MNFMLibraryValid() { return MwTRUE; }
