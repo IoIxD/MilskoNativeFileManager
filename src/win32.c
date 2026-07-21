@@ -98,8 +98,8 @@ static DWORD WINAPI folder_show(LPVOID lpParam) {
   }
 
   if (o->creation_type == MNFMSAVE) {
-    o->psd->lpVtbl->SetTitle(o->pfd, o->wtitle);
-    o->psd->lpVtbl->Show(o->pfd, NULL);
+    o->psd->lpVtbl->SetTitle(o->psd, o->wtitle);
+    o->psd->lpVtbl->Show(o->psd, NULL);
   } else {
     o->pfd->lpVtbl->SetTitle(o->pfd, o->wtitle);
     o->pfd->lpVtbl->Show(o->pfd, NULL);
@@ -107,7 +107,7 @@ static DWORD WINAPI folder_show(LPVOID lpParam) {
 
   while (!arr) {
     if (o->creation_type == MNFMSAVE) {
-      o->psd->lpVtbl->GetResult(o->pfd, &arr);
+      o->psd->lpVtbl->GetResult(o->psd, &arr);
     } else {
       o->pfd->lpVtbl->GetResult(o->pfd, &arr);
     }
