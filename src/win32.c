@@ -10,7 +10,10 @@ typedef struct internal_t {
   MwBool valid;
   MNFMCreationType creation_type;
 
-  IFileOpenDialog *pfd;
+  union {
+    IFileOpenDialog *pfd;
+    IFileSaveDialog *psd;
+  };
   HANDLE thread;
 
   MwWidget handle;
@@ -54,12 +57,19 @@ static int wcreate(MwWidget handle) {
 static void destroy(MwWidget handle) {
   internal *o = handle->internal;
 
-  if (o->pfd) {
-    o->pfd->lpVtbl->Close(o->pfd, 0);
-    o->pfd->lpVtbl->Release(o->pfd);
-    DeleteObject(o->pfd);
+  if (o->creation_type == MNFMSAVE) {
+    if (o->psd) {
+      o->psd->lpVtbl->Close(o->psd, 0);
+      o->psd->lpVtbl->Release(o->psd);
+      DeleteObject(o->psd);
+    }
+  } else {
+    if (o->pfd) {
+      o->pfd->lpVtbl->Close(o->pfd, 0);
+      o->pfd->lpVtbl->Release(o->pfd);
+      DeleteObject(o->pfd);
+    }
   }
-
   if (o->thread) {
     TerminateThread(o->thread, 0);
   }
@@ -73,8 +83,13 @@ static DWORD WINAPI folder_show(LPVOID lpParam) {
   HRESULT hr;
   FILEOPENDIALOGOPTIONS opts;
 
-  CoCreateInstance(&CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER,
-                   &IID_IFileOpenDialog, (void **)&o->pfd);
+  if (o->creation_type == MNFMSAVE) {
+    CoCreateInstance(&CLSID_FileSaveDialog, NULL, CLSCTX_INPROC_SERVER,
+                     &IID_IFileSaveDialog, (void **)&o->psd);
+  } else {
+    CoCreateInstance(&CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER,
+                     &IID_IFileOpenDialog, (void **)&o->pfd);
+  }
 
   if (o->creation_type == MNFMDIRECTORY) {
     o->pfd->lpVtbl->GetOptions(o->pfd, &opts);
@@ -82,12 +97,20 @@ static DWORD WINAPI folder_show(LPVOID lpParam) {
     o->pfd->lpVtbl->SetOptions(o->pfd, opts);
   }
 
-  o->pfd->lpVtbl->SetTitle(o->pfd, o->wtitle);
-
-  o->pfd->lpVtbl->Show(o->pfd, NULL);
+  if (o->creation_type == MNFMSAVE) {
+    o->psd->lpVtbl->SetTitle(o->pfd, o->wtitle);
+    o->psd->lpVtbl->Show(o->pfd, NULL);
+  } else {
+    o->pfd->lpVtbl->SetTitle(o->pfd, o->wtitle);
+    o->pfd->lpVtbl->Show(o->pfd, NULL);
+  }
 
   while (!arr) {
-    o->pfd->lpVtbl->GetResult(o->pfd, &arr);
+    if (o->creation_type == MNFMSAVE) {
+      o->psd->lpVtbl->GetResult(o->pfd, &arr);
+    } else {
+      o->pfd->lpVtbl->GetResult(o->pfd, &arr);
+    }
 
     if (arr) {
       WCHAR *wname = NULL;
@@ -111,11 +134,15 @@ static DWORD WINAPI folder_show(LPVOID lpParam) {
     }
   }
 
-  o->pfd->lpVtbl->Release(o->pfd);
-
-  DeleteObject(o->pfd);
-
-  o->pfd = NULL;
+  if (o->creation_type == MNFMSAVE) {
+    o->psd->lpVtbl->Release(o->psd);
+    DeleteObject(o->psd);
+    o->psd = NULL;
+  } else {
+    o->pfd->lpVtbl->Release(o->pfd);
+    DeleteObject(o->pfd);
+    o->pfd = NULL;
+  }
 
   return 0;
 }

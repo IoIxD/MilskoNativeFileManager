@@ -109,7 +109,8 @@ static int _MNFMOpen(MwWidget handle, const char *title,
 
   msg = dbus.dbus_message_new_method_call(
       "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
-      "org.freedesktop.portal.FileChooser", "OpenFile");
+      "org.freedesktop.portal.FileChooser",
+      (creationType == MNFMSAVE) ? "SaveFile" : "OpenFile");
 
   if (msg == NULL) {
     printf("no memory\n");
