@@ -49,7 +49,10 @@ static int wcreate(MwWidget handle) {
 
   o->handle = handle;
 
+  o->pfd = NULL;
+
   o->valid = MwTRUE;
+
 
   return 0;
 }
@@ -83,12 +86,19 @@ static DWORD WINAPI folder_show(LPVOID lpParam) {
   HRESULT hr;
   FILEOPENDIALOGOPTIONS opts;
 
+  CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+
   if (o->creation_type == MNFMSAVE) {
-    CoCreateInstance(&CLSID_FileSaveDialog, NULL, CLSCTX_INPROC_SERVER,
+    hr = CoCreateInstance(&CLSID_FileSaveDialog, NULL, CLSCTX_INPROC_SERVER,
                      &IID_IFileSaveDialog, (void **)&o->psd);
   } else {
-    CoCreateInstance(&CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER,
+    hr = CoCreateInstance(&CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER,
                      &IID_IFileOpenDialog, (void **)&o->pfd);
+  }
+
+  if(!SUCCEEDED(hr)) {
+      printf("CoCreateInstance failed! %08lX\n",hr);
+      return 0;
   }
 
   if (o->creation_type == MNFMDIRECTORY) {
@@ -193,4 +203,4 @@ MwClassRec MNFMWidgetClassRec = {
 
 MwClass MNFMWidgetClass = &MNFMWidgetClassRec;
 
-void MNFMLibraryInit(void) { CoInitializeEx(NULL, COINIT_MULTITHREADED); };
+void MNFMLibraryInit(void) { CoInitializeEx(NULL, COINIT_APARTMENTTHREADED); };
