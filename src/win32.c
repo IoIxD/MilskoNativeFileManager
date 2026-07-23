@@ -86,7 +86,7 @@ static DWORD WINAPI folder_show(LPVOID lpParam) {
   HRESULT hr;
   FILEOPENDIALOGOPTIONS opts;
 
-  CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+  CoInitializeEx(NULL, COINIT_MULTITHREADED);
 
   if (o->creation_type == MNFMSAVE) {
     hr = CoCreateInstance(&CLSID_FileSaveDialog, NULL, CLSCTX_INPROC_SERVER,
