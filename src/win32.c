@@ -159,7 +159,7 @@ static DWORD WINAPI folder_show(LPVOID lpParam) {
 
 void _MNFMSetVars(MwWidget handle, MNFMCreationType creationType) {
   internal *o = handle->internal;
-  const char *title = MwGetText(handle, MwNtitle);
+  const char *title = MwGetString(handle, MwNtitle);
   o->creation_type = creationType;
 
   MultiByteToWideChar(CP_UTF8, 0, title, -1, o->wtitle, sizeof(o->wtitle));

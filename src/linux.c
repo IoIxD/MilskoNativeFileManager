@@ -190,7 +190,7 @@ static int _MNFMOpen(MwWidget handle, const char *title,
 static void tick(MwWidget handle) {
   internal *o = handle->internal;
   if (!o->opened) {
-    _MNFMOpen(handle, MwGetText(handle, MwNtitle), o->creation_type);
+    _MNFMOpen(handle, MwGetString(handle, MwNtitle), o->creation_type);
     o->opened = MwTRUE;
   }
   if (o->status != -1) {
