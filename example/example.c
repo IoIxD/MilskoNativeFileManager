@@ -4,7 +4,7 @@
 MwWidget fileName;
 
 static void file_chosen(MwWidget handle, void *user_data, void *call_data) {
-  MwSetText(fileName, MwNtext, (char *)call_data);
+  MwSetString(fileName, MwNtext, (char *)call_data);
 };
 
 int main() {
